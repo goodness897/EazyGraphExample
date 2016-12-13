@@ -110,5 +110,4 @@ public abstract class BaseModel {
     public void setIgnore(boolean _ignore) {
         mIgnore = _ignore;
     }
-
 }

@@ -43,6 +43,71 @@ import java.util.Locale;
  */
 public abstract class BaseChart extends ViewGroup {
 
+    //##############################################################################################
+    // Variables
+    //##############################################################################################
+
+    protected final static NumberFormat mFormatter = NumberFormat.getInstance(Locale.getDefault());
+
+    public static final float DEF_LEGEND_HEIGHT = 58.f;
+
+    public static final int DEF_LEGEND_COLOR = 0xFF898989;
+
+    // will be interpreted as sp value
+    public static final float DEF_LEGEND_TEXT_SIZE = 12.f;
+
+    public static final int DEF_ANIMATION_TIME = 2000;
+
+    public static final boolean DEF_SHOW_DECIMAL = false;
+
+    public static final String DEF_EMPTY_DATA_TEXT = "No Data available";
+
+    protected Graph mGraph;
+
+    protected GraphOverlay mGraphOverlay;
+
+    protected Legend mLegend;
+
+    protected int mHeight;
+
+    protected int mWidth;
+
+    protected int mGraphWidth;
+
+    protected int mGraphHeight;
+
+    protected float mLegendWidth;
+
+    protected float mLegendHeight;
+
+    protected float mLegendTextSize;
+
+    protected int mLegendColor;
+
+    protected int mLeftPadding;
+
+    protected int mTopPadding;
+
+    protected int mRightPadding;
+
+    protected int mBottomPadding;
+
+    protected String mEmptyDataText;
+
+    protected float mMaxFontHeight;
+
+    protected float mLegendTopPadding = Utils.dpToPx(4.f);
+
+    protected boolean mShowDecimal;
+
+    protected ValueAnimator mRevealAnimator = null;
+
+    protected float mRevealValue = 1.0f;
+
+    protected int mAnimationTime = 1000;
+
+    protected boolean mStartedAnimation = false;
+
     /**
      * Simple constructor to use when creating a view from code.
      *
@@ -532,69 +597,6 @@ public abstract class BaseChart extends ViewGroup {
         }
     }
 
-    //##############################################################################################
-    // Variables
-    //##############################################################################################
 
-    protected final static NumberFormat mFormatter = NumberFormat.getInstance(Locale.getDefault());
-
-    public static final float DEF_LEGEND_HEIGHT = 58.f;
-
-    public static final int DEF_LEGEND_COLOR = 0xFF898989;
-
-    // will be interpreted as sp value
-    public static final float DEF_LEGEND_TEXT_SIZE = 12.f;
-
-    public static final int DEF_ANIMATION_TIME = 2000;
-
-    public static final boolean DEF_SHOW_DECIMAL = false;
-
-    public static final String DEF_EMPTY_DATA_TEXT = "No Data available";
-
-    protected Graph mGraph;
-
-    protected GraphOverlay mGraphOverlay;
-
-    protected Legend mLegend;
-
-    protected int mHeight;
-
-    protected int mWidth;
-
-    protected int mGraphWidth;
-
-    protected int mGraphHeight;
-
-    protected float mLegendWidth;
-
-    protected float mLegendHeight;
-
-    protected float mLegendTextSize;
-
-    protected int mLegendColor;
-
-    protected int mLeftPadding;
-
-    protected int mTopPadding;
-
-    protected int mRightPadding;
-
-    protected int mBottomPadding;
-
-    protected String mEmptyDataText;
-
-    protected float mMaxFontHeight;
-
-    protected float mLegendTopPadding = Utils.dpToPx(4.f);
-
-    protected boolean mShowDecimal;
-
-    protected ValueAnimator mRevealAnimator = null;
-
-    protected float mRevealValue = 1.0f;
-
-    protected int mAnimationTime = 1000;
-
-    protected boolean mStartedAnimation = false;
 
 }

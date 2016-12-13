@@ -80,11 +80,130 @@ import java.util.List;
  */
 public class PieChart extends BaseChart {
 
+    //##############################################################################################
+    // Variables
+    //##############################################################################################
+
+    private static final String LOG_TAG = PieChart.class.getSimpleName();
+
+    public static final float DEF_INNER_PADDING = 65.f;
+
+    public static final float DEF_INNER_PADDING_OUTLINE = 5.f;
+
+    public static final boolean DEF_USE_INNER_PADDING = true;
+
+    public static final float DEF_HIGHLIGHT_STRENGTH = 1.15f;
+
+    public static final boolean DEF_USE_PIE_ROTATION = true;
+
+    public static final boolean DEF_AUTO_CENTER = true;
+
+    public static final boolean DEF_DRAW_VALUE_IN_PIE = true;
+
+    public static final float DEF_VALUE_TEXT_SIZE = 14.f;
+
+    public static final int DEF_VALUE_TEXT_COLOR = 0xFF898989;
+
+    public static final boolean DEF_USE_CUSTOM_INNER_VALUE = false;
+
+    public static final boolean DEF_OPEN_CLOCKWISE = true;
+
+    public static final int DEF_INNER_PADDING_COLOR = 0xFFF3F3F3; // Holo light background
+
+    public static final String DEF_INNER_VALUE_UNIT = "";
+
     /**
-     * Simple constructor to use when creating a view from code.
-     *
-     * @param context The Context the view is running in, through which it can access the current theme, resources, etc.
+     * The initial fling velocity is divided by this amount.
      */
+    public static final int FLING_VELOCITY_DOWNSCALE = 4;
+
+    public static final int AUTOCENTER_ANIM_DURATION = 250;
+
+    private List<PieModel> mPieData;
+
+    private Paint mGraphPaint;
+
+    private Paint mLegendPaint;
+
+    private Paint mValuePaint;
+
+    private RectF mGraphBounds;
+
+    private RectF mInnerBounds;
+
+    private RectF mInnerOutlineBounds;
+
+    // Inner Value stuff
+    private Rect mValueTextBounds = new Rect();
+
+    // Legend stuff
+    private float mIndicatorSize = Utils.dpToPx(8);
+
+    private float mIndicatorTopMargin = Utils.dpToPx(6);
+
+    private float mIndicatorBottomMargin = Utils.dpToPx(4);
+
+    private Path mTriangle;
+
+    private Rect mTextBounds = new Rect();
+
+    private float mPieDiameter;
+
+    private float mPieRadius;
+
+    private float mTotalValue;
+
+    private String mInnerValueString = "";
+
+    // Attributes -----------------------------------------------------
+    private boolean mUseInnerPadding;
+
+    private float mInnerPadding;
+
+    private float mInnerPaddingOutline;
+
+    private int mInnerPaddingColor;
+
+    private float mHighlightStrength;
+
+    private boolean mAutoCenterInSlice;
+
+    private boolean mUsePieRotation;
+
+    private boolean mDrawValueInPie;
+
+    private float mValueTextSize;
+
+    private int mValueTextColor;
+
+    private boolean mUseCustomInnerValue;
+
+    private boolean mOpenClockwise;
+
+    private String mInnerValueUnit;
+    // END - Attributes -----------------------------------------------
+
+    private float mCalculatedInnerPadding;
+
+    private float mCalculatedInnerPaddingOutline;
+
+    private int mPieRotation;
+
+    // Indicator is located at the bottom
+    private int mIndicatorAngle = 90;
+
+    private int mCurrentItem = 0;
+
+    private ObjectAnimator mAutoCenterAnimator;
+
+    private Scroller mScroller;
+
+    private ValueAnimator mScrollAnimator;
+
+    private GestureDetector mDetector;
+
+    private IOnItemFocusChangedListener mListener;
+
     public PieChart(Context context) {
         super(context);
 
@@ -119,8 +238,7 @@ public class PieChart extends BaseChart {
             mUsePieRotation = a.getBoolean(R.styleable.PieChart_egUsePieRotation, DEF_USE_PIE_ROTATION);
             mAutoCenterInSlice = a.getBoolean(R.styleable.PieChart_egAutoCenter, DEF_AUTO_CENTER);
             mDrawValueInPie = a.getBoolean(R.styleable.PieChart_egDrawValueInPie, DEF_DRAW_VALUE_IN_PIE);
-            mValueTextSize = a.getDimension(R.styleable.PieChart_egValueTextSize,
-                                            Utils.dpToPx(DEF_VALUE_TEXT_SIZE));
+            mValueTextSize = a.getDimension(R.styleable.PieChart_egValueTextSize, Utils.dpToPx(DEF_VALUE_TEXT_SIZE));
             mValueTextColor = a.getColor(R.styleable.PieChart_egValueTextColor, DEF_VALUE_TEXT_COLOR);
             mUseCustomInnerValue = a.getBoolean(R.styleable.PieChart_egUseCustomInnerValue, DEF_USE_CUSTOM_INNER_VALUE);
             mOpenClockwise = a.getBoolean(R.styleable.PieChart_egOpenClockwise, DEF_OPEN_CLOCKWISE);
@@ -908,8 +1026,7 @@ public class PieChart extends BaseChart {
             PieModel model = mPieData.get(mCurrentItem);
 
             if (!mUseCustomInnerValue) {
-                mInnerValueString = Utils.getFloatString(model.getValue(),
-                                                                                            mShowDecimal);
+                mInnerValueString = Utils.getFloatString(model.getValue(), mShowDecimal);
                 if (mInnerValueUnit != null && mInnerValueUnit.length() > 0) {
                     mInnerValueString += " " + mInnerValueUnit;
                 }
@@ -929,9 +1046,7 @@ public class PieChart extends BaseChart {
 
         _Canvas.drawPath(mTriangle, mLegendPaint);
 
-        float height =
-                     mMaxFontHeight =
-                                    Utils.calculateMaxTextHeight(mLegendPaint, null);
+        float height = mMaxFontHeight = Utils.calculateMaxTextHeight(mLegendPaint, null);
 
         if (!mPieData.isEmpty()) {
             PieModel model = mPieData.get(mCurrentItem);
@@ -1001,11 +1116,10 @@ public class PieChart extends BaseChart {
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
             // Set the pie rotation directly.
-            float scrollTheta =
-                              Utils.vectorToScalarScroll(distanceX,
-                                                                                            distanceY,
-                                                                                            e2.getX() - getGraphBounds().centerX(),
-                                                                                            e2.getY() - getGraphBounds().centerY());
+            float scrollTheta = Utils.vectorToScalarScroll(distanceX,
+                                                           distanceY,
+                                                           e2.getX() - getGraphBounds().centerX(),
+                                                           e2.getY() - getGraphBounds().centerY());
             setPieRotation(mPieRotation - (int)scrollTheta / FLING_VELOCITY_DOWNSCALE);
             return true;
         }
@@ -1013,11 +1127,10 @@ public class PieChart extends BaseChart {
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
             // Set up the Scroller for a fling
-            float scrollTheta =
-                              Utils.vectorToScalarScroll(velocityX,
-                                                                                            velocityY,
-                                                                                            e2.getX() - getGraphBounds().centerX(),
-                                                                                            e2.getY() - getGraphBounds().centerY());
+            float scrollTheta = Utils.vectorToScalarScroll(velocityX,
+                                                           velocityY,
+                                                           e2.getX() - getGraphBounds().centerX(),
+                                                           e2.getY() - getGraphBounds().centerY());
             mScroller.fling(0,
                             mPieRotation,
                             0,
@@ -1058,129 +1171,5 @@ public class PieChart extends BaseChart {
     private boolean isAnimationRunning() {
         return !mScroller.isFinished() || mAutoCenterAnimator.isRunning();
     }
-
-    //##############################################################################################
-    // Variables
-    //##############################################################################################
-
-    private static final String LOG_TAG = PieChart.class.getSimpleName();
-
-    public static final float DEF_INNER_PADDING = 65.f;
-
-    public static final float DEF_INNER_PADDING_OUTLINE = 5.f;
-
-    public static final boolean DEF_USE_INNER_PADDING = true;
-
-    public static final float DEF_HIGHLIGHT_STRENGTH = 1.15f;
-
-    public static final boolean DEF_USE_PIE_ROTATION = true;
-
-    public static final boolean DEF_AUTO_CENTER = true;
-
-    public static final boolean DEF_DRAW_VALUE_IN_PIE = true;
-
-    public static final float DEF_VALUE_TEXT_SIZE = 14.f;
-
-    public static final int DEF_VALUE_TEXT_COLOR = 0xFF898989;
-
-    public static final boolean DEF_USE_CUSTOM_INNER_VALUE = false;
-
-    public static final boolean DEF_OPEN_CLOCKWISE = true;
-
-    public static final int DEF_INNER_PADDING_COLOR = 0xFFF3F3F3; // Holo light background
-
-    public static final String DEF_INNER_VALUE_UNIT = "";
-
-    /**
-     * The initial fling velocity is divided by this amount.
-     */
-    public static final int FLING_VELOCITY_DOWNSCALE = 4;
-
-    public static final int AUTOCENTER_ANIM_DURATION = 250;
-
-    private List<PieModel> mPieData;
-
-    private Paint mGraphPaint;
-
-    private Paint mLegendPaint;
-
-    private Paint mValuePaint;
-
-    private RectF mGraphBounds;
-
-    private RectF mInnerBounds;
-
-    private RectF mInnerOutlineBounds;
-
-    // Inner Value stuff
-    private Rect mValueTextBounds = new Rect();
-
-    // Legend stuff
-    private float mIndicatorSize = Utils.dpToPx(8);
-
-    private float mIndicatorTopMargin = Utils.dpToPx(6);
-
-    private float mIndicatorBottomMargin = Utils.dpToPx(4);
-
-    private Path mTriangle;
-
-    private Rect mTextBounds = new Rect();
-
-    private float mPieDiameter;
-
-    private float mPieRadius;
-
-    private float mTotalValue;
-
-    private String mInnerValueString = "";
-
-    // Attributes -----------------------------------------------------
-    private boolean mUseInnerPadding;
-
-    private float mInnerPadding;
-
-    private float mInnerPaddingOutline;
-
-    private int mInnerPaddingColor;
-
-    private float mHighlightStrength;
-
-    private boolean mAutoCenterInSlice;
-
-    private boolean mUsePieRotation;
-
-    private boolean mDrawValueInPie;
-
-    private float mValueTextSize;
-
-    private int mValueTextColor;
-
-    private boolean mUseCustomInnerValue;
-
-    private boolean mOpenClockwise;
-
-    private String mInnerValueUnit;
-    // END - Attributes -----------------------------------------------
-
-    private float mCalculatedInnerPadding;
-
-    private float mCalculatedInnerPaddingOutline;
-
-    private int mPieRotation;
-
-    // Indicator is located at the bottom
-    private int mIndicatorAngle = 90;
-
-    private int mCurrentItem = 0;
-
-    private ObjectAnimator mAutoCenterAnimator;
-
-    private Scroller mScroller;
-
-    private ValueAnimator mScrollAnimator;
-
-    private GestureDetector mDetector;
-
-    private IOnItemFocusChangedListener mListener;
 
 }
